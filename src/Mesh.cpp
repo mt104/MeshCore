@@ -1,5 +1,5 @@
 #include "Mesh.h"
-//#include <Arduino.h>
+#include <Arduino.h>
 
 namespace mesh {
 
@@ -86,7 +86,8 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
       }
     }
 
-    if (self_id.isHashMatch(pkt->path, pkt->getPathHashSize()) && allowPacketForward(pkt)) {
+    // if (self_id.isHashMatch(pkt->path, pkt->getPathHashSize()) && allowPacketForward(pkt)) {
+    if (self_id.isHashMatchAnywhereInPath(pkt->path, pkt->path_len, pkt->path, pkt->path_len) && allowPacketForward(pkt)) {
       if (pkt->getPayloadType() == PAYLOAD_TYPE_MULTIPART) {
         return forwardMultipartDirect(pkt);
       } else if (pkt->getPayloadType() == PAYLOAD_TYPE_ACK) {
@@ -100,7 +101,22 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
 
       if (!_tables->wasSeen(pkt)) {
         _tables->markSeen(pkt);
+
+        Serial.printf("DEBUG_MARKT: Preparing to forward\r\n");
+
+        Serial.printf("DEBUG_MARKT: Before removing self from path\r\n");
+        pkt->debugToSerial(pkt);
+
+        while (!self_id.isHashMatch(pkt->path, pkt->getPathHashSize())) {
+          removeSelfFromPath(pkt);
+        }
+
         removeSelfFromPath(pkt);
+
+        Serial.printf("DEBUG_MARKT: After removing self from path\r\n");
+        pkt->debugToSerial(pkt);
+
+        Serial.printf("DEBUG_MARKT: Forwarding\r\n");
 
         uint32_t d = getDirectRetransmitDelay(pkt);
         return ACTION_RETRANSMIT_DELAYED(0, d);  // Routed traffic is HIGHEST priority 
@@ -113,20 +129,23 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
 
   DispatcherAction action = ACTION_RELEASE;
 
-  switch (pkt->getPayloadType()) {
-    case PAYLOAD_TYPE_ACK: {
-      int i = 0;
-      uint32_t ack_crc;
-      memcpy(&ack_crc, &pkt->payload[i], 4); i += 4;
-      if (i > pkt->payload_len) {
-        MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): incomplete ACK packet", getLogDateTime());
-      } else if (!_tables->wasSeen(pkt)) {
-        _tables->markSeen(pkt);
-        onAckRecv(pkt, ack_crc);
-        action = routeRecvPacket(pkt);
-      }
-      break;
+  //Serial.printf("DEBUG_MARKT: Handling packet locally, type %i\r\n", pkt->getPayloadType());
+
+      switch (pkt->getPayloadType()) {
+  case PAYLOAD_TYPE_ACK: {
+    int i = 0;
+    uint32_t ack_crc;
+    memcpy(&ack_crc, &pkt->payload[i], 4);
+    i += 4;
+    if (i > pkt->payload_len) {
+      MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): incomplete ACK packet", getLogDateTime());
+    } else if (!_tables->wasSeen(pkt)) {
+      _tables->markSeen(pkt);
+      onAckRecv(pkt, ack_crc);
+      action = routeRecvPacket(pkt);
     }
+    break;
+  }
     case PAYLOAD_TYPE_PATH:
     case PAYLOAD_TYPE_REQ:
     case PAYLOAD_TYPE_RESPONSE:
@@ -327,7 +346,7 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
       MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): unknown payload type, header: %d", getLogDateTime(), (int) pkt->header);
       // Don't flood route unknown packet types!   action = routeRecvPacket(pkt);
       break;
-  }
+    }
   return action;
 }
 

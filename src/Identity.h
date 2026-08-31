@@ -31,14 +31,23 @@ public:
     return memcmp(hash, pub_key, len) == 0;
   }
 
-  /**
-   * \brief  Performs Ed25519 signature verification.
-   * \param sig IN - must be SIGNATURE_SIZE buffer.
-   * \param message IN - the original message which was signed.
-   * \param msg_len IN - the length in bytes of message.
-   * \returns true, if signature is valid.
-  */
-  bool verify(const uint8_t* sig, const uint8_t* message, int msg_len) const;
+  bool isHashMatchAnywhereInPath(const uint8_t *hash, uint8_t len, const uint8_t *path, uint8_t path_len) const {
+    uint8_t hash_size = (path_len >> 6) + 1;
+    uint8_t hash_count = path_len & 63;
+    for (int i = 0; i < hash_count; i++) {
+      if (memcmp(hash, &path[i*hash_size], len) == 0) return true;
+    }
+    return false;
+  }
+
+      /**
+       * \brief  Performs Ed25519 signature verification.
+       * \param sig IN - must be SIGNATURE_SIZE buffer.
+       * \param message IN - the original message which was signed.
+       * \param msg_len IN - the length in bytes of message.
+       * \returns true, if signature is valid.
+       */
+      bool verify(const uint8_t *sig, const uint8_t *message, int msg_len) const;
 
   bool matches(const Identity& other) const { return memcmp(pub_key, other.pub_key, PUB_KEY_SIZE) == 0; }
   bool matches(const uint8_t* other_pubkey) const { return memcmp(pub_key, other_pubkey, PUB_KEY_SIZE) == 0; }
