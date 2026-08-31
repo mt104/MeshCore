@@ -109,6 +109,8 @@ public:
    * \param  len  the packet length (as returned by writeTo())
    */
   bool readFrom(const uint8_t src[], uint8_t len);
+
+  void debugToSerial(const Packet *pkt);
 };
 
 }
