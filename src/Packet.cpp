@@ -87,7 +87,7 @@ bool Packet::readFrom(const uint8_t src[], uint8_t len) {
 }
 
 void Packet::debugToSerial(const Packet* pkt) {
-  Serial.printf("Packet: header=%02X, path_len=%d, payload_len=%d, transport_codes=[%04X,%04X], path=[", pkt->header, (uint32_t)pkt->path_len, (uint32_t)pkt->payload_len, (uint32_t)pkt->transport_codes[0], (uint32_t)pkt->transport_codes[1]);
+  Serial.printf("Packet: hop_count=%d, header=%02X, path_len=%d, payload_len=%d, transport_codes=[%04X,%04X], path=[", (uint32_t)(pkt->path_len & 0x3F), pkt->header, (uint32_t)pkt->path_len, (uint32_t)pkt->payload_len, (uint32_t)pkt->transport_codes[0], (uint32_t)pkt->transport_codes[1]);
   for (int i = 0; i < pkt->getPathByteLen(); i++) {
     Serial.printf("%02X", pkt->path[i]);
     if (i < pkt->getPathByteLen() - 1) Serial.printf(",");
