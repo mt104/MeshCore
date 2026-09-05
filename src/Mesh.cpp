@@ -39,6 +39,18 @@ int Mesh::searchChannelsByHash(const uint8_t* hash, GroupChannel channels[], int
 }
 
 DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
+  if (pkt->isHeardDirect() && pkt->getPayloadType() == PAYLOAD_TYPE_TXT_MSG) {
+    // Keep track of directly heard messages
+    int i = 0;
+    uint8_t dest_hash = pkt->payload[i++];
+    uint8_t src_hash = pkt->payload[i++];
+    Serial.printf("DEBUG_MARKT: Directly heard... src_hash=%02X -> dest_hash=%02X\r\n", src_hash, dest_hash);
+    pkt->debugToSerial(pkt);
+
+    //TODO: Implement tracking of directly heard messages
+
+  }
+
   if (pkt->isRouteDirect() && pkt->getPayloadType() == PAYLOAD_TYPE_TRACE) {
     if (pkt->path_len < MAX_PATH_SIZE) {
       uint8_t i = 0;
