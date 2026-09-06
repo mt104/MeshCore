@@ -39,6 +39,7 @@ int Mesh::searchChannelsByHash(const uint8_t* hash, GroupChannel channels[], int
 }
 
 DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
+  /*
   if (pkt->isHeardDirect() && pkt->getPayloadType() == PAYLOAD_TYPE_TXT_MSG) {
     // Keep track of directly heard messages
     int i = 0;
@@ -50,6 +51,7 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
     //TODO: Implement tracking of directly heard messages
 
   }
+  */
 
   if (pkt->isRouteDirect() && pkt->getPayloadType() == PAYLOAD_TYPE_TRACE) {
     if (pkt->path_len < MAX_PATH_SIZE) {
@@ -314,6 +316,24 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
           MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): valid advertisement received!", getLogDateTime());
           onAdvertRecv(pkt, id, timestamp, app_data, app_data_len);
           action = routeRecvPacket(pkt);
+
+          // Inspect advert looking for locally heard companions
+          if (pkt->path_len == 0) {
+            //Serial.printf("DEBUG_MARKT: payload=");
+            //for (int j = 0; j < pkt->payload_len; j++) {
+            //  Serial.printf("%02X", pkt->payload[j]);
+            //}
+            //Serial.printf("\r\n");
+            uint8_t companion_hash_1B = pkt->payload[0];
+            Serial.printf("DEBUG_MARKT: Direct advert heard... companion_hash_1B=%02X, "
+                          "path_len=%d, path=",
+                          companion_hash_1B, pkt->path_len);
+            for (int j = 0; j < pkt->path_len; j++) {
+              Serial.printf("%02X", pkt->path[j]);
+            }
+            Serial.printf("\r\n");
+          }
+
         } else {
           MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): received advertisement with forged signature! (app_data_len=%d)", getLogDateTime(), app_data_len);
         }
