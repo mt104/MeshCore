@@ -1,5 +1,5 @@
 #include "Mesh.h"
-//#include <Arduino.h>
+#include <Arduino.h>
 
 namespace mesh {
 
@@ -106,7 +106,23 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
         return ACTION_RETRANSMIT_DELAYED(0, d);  // Routed traffic is HIGHEST priority 
       }
     }
-    return ACTION_RELEASE;   // this node is NOT the next hop (OR this packet has already been forwarded), so discard.
+
+    // If this is a txt message that might be for us, even though we're not the next hop, check if it's addressed to this node.
+    bool isForThisNode = false;
+    if (pkt->getPayloadType() == PAYLOAD_TYPE_TXT_MSG) {
+      int i = 0;
+      uint8_t dest_hash = pkt->payload[i++];
+      uint8_t src_hash = pkt->payload[i++];
+      if (self_id.isHashMatch(&dest_hash)) {
+        Serial.printf("Received TXT_MSG maybe for this node but we're not next hop so processing it anyway\r\n");
+        isForThisNode = true;
+      }
+    }
+
+    if (!isForThisNode) {
+      // this node is NOT the next hop (OR this packet has already been forwarded), so discard.
+      return ACTION_RELEASE;
+    }
   }
 
   if (pkt->isRouteFlood() && filterRecvFloodPacket(pkt)) return ACTION_RELEASE;
