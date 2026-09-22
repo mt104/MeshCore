@@ -1,6 +1,8 @@
 #include "Packet.h"
-#include <string.h>
+
+#include <Arduino.h>
 #include <SHA256.h>
+#include <string.h>
 
 namespace mesh {
 
@@ -82,6 +84,15 @@ bool Packet::readFrom(const uint8_t src[], uint8_t len) {
   if (payload_len > sizeof(payload)) return false;  // bad encoding
   memcpy(payload, &src[i], payload_len); //i += payload_len;
   return true;   // success
+}
+
+void Packet::debugToSerial(const Packet* pkt) {
+  Serial.printf("Packet: header=%02X, path_len=%d, payload_len=%d, transport_codes=[%04X,%04X], path=[", pkt->header, (uint32_t)pkt->path_len, (uint32_t)pkt->payload_len, (uint32_t)pkt->transport_codes[0], (uint32_t)pkt->transport_codes[1]);
+  for (int i = 0; i < pkt->getPathByteLen(); i++) {
+    Serial.printf("%02X", pkt->path[i]);
+    if (i < pkt->getPathByteLen() - 1) Serial.printf(",");
+  }
+  Serial.printf("]\r\n");
 }
 
 }
