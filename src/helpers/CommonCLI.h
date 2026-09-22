@@ -70,6 +70,9 @@ public:
   uint8_t loop_detect = 0;
   uint8_t cad_enabled = 0;      // hardware Channel Activity Detection before TX (boolean)
   uint8_t extra_sf[4];
+  // WiFi settings (ESP32 only)
+  char wifi_ssid[33];
+  char wifi_password[64];
 
 private:
   class RadioPrefs : public ConfigSerializer {

@@ -13,14 +13,21 @@
   #include <helpers/nrf52/EthernetCLI.h>
 #endif
 
-StdRNG fast_rng;
-SimpleMeshTables tables;
+#if defined(ESP32)
+#include "helpers/WiFiHelper.h"
+#include "WiFi.h"
+WiFiHelperClass WiFiHelper;
+#endif
 
-MyMesh the_mesh(board, radio_driver, *new ArduinoMillis(), fast_rng, rtc_clock, tables);
+  StdRNG fast_rng;
+  SimpleMeshTables tables;
 
-void halt() {
-  while (1) ;
-}
+  MyMesh the_mesh(board, radio_driver, *new ArduinoMillis(), fast_rng, rtc_clock, tables);
+
+  void halt() {
+    while (1)
+      ;
+  }
 
 static char command[160];
 #ifdef ETHERNET_ENABLED
@@ -33,6 +40,12 @@ unsigned long POWERSAVING_FIRSTSLEEP_SECS = 120; // The first sleep (if enabled)
 #if defined(PIN_USER_BTN) && defined(_SEEED_SENSECAP_SOLAR_H_)
 static unsigned long userBtnDownAt = 0;
 #define USER_BTN_HOLD_OFF_MILLIS 1500
+#endif
+
+/* WIFI RECONNECT TRACKERS */
+#if defined(ESP32)
+bool wifi_needs_reconnect = false;
+unsigned long last_wifi_reconnect_attempt = 0;
 #endif
 
 void setup() {
@@ -84,6 +97,7 @@ void setup() {
 #else
   #error "need to define filesystem"
 #endif
+
   if (!store.load("_main", the_mesh.self_id)) {
     MESH_DEBUG_PRINTLN("Generating new keypair");
     the_mesh.self_id = radio_new_identity();   // create new random identity
@@ -112,6 +126,24 @@ void setup() {
 
 #ifdef ETHERNET_ENABLED
   ethernet_start_task();
+#endif
+
+// add wifi interface
+#if defined(ESP32)
+  board.setInhibitSleep(true); // Assume we need to inhibit sleep when WiFi is active
+  WiFi.setAutoReconnect(true);
+  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+      Serial.printf("WiFi disconnected. Flagging for reconnect...\r\n");
+      wifi_needs_reconnect = true;
+    } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+      Serial.printf("WiFi connected successfully, IP = %s\r\n", WiFi.localIP().toString().c_str());
+      wifi_needs_reconnect = false;
+    }
+  });
+  WiFiHelper.setFilesystem(fs);
+  WiFiHelper.load();
+  board.setInhibitSleep(WiFiHelper.shouldInhibitSleep()); // Update sleep inhibition based on WiFi configuration
 #endif
 
   // send out initial zero hop Advertisement to the mesh
