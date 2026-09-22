@@ -1,5 +1,5 @@
 #include "Mesh.h"
-#include <Arduino.h>
+//#include <Arduino.h>
 
 namespace mesh {
 
@@ -101,23 +101,16 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
 
       if (!_tables->wasSeen(pkt)) {
         _tables->markSeen(pkt);
-
-        Serial.printf("DEBUG_MARKT: Preparing to forward\r\n");
-
-        Serial.printf("DEBUG_MARKT: Before removing self from path\r\n");
-        pkt->debugToSerial(pkt);
-
+        //Serial.printf("DEBUG_MARKT: Preparing to forward\r\n");
+        //Serial.printf("DEBUG_MARKT: Before removing self from path\r\n");
+        //pkt->debugToSerial(pkt);
         while (!self_id.isHashMatch(pkt->path, pkt->getPathHashSize())) {
           removeSelfFromPath(pkt);
         }
-
         removeSelfFromPath(pkt);
-
-        Serial.printf("DEBUG_MARKT: After removing self from path\r\n");
-        pkt->debugToSerial(pkt);
-
-        Serial.printf("DEBUG_MARKT: Forwarding\r\n");
-
+        //Serial.printf("DEBUG_MARKT: After removing self from path\r\n");
+        //pkt->debugToSerial(pkt);
+        //Serial.printf("DEBUG_MARKT: Forwarding\r\n");
         uint32_t d = getDirectRetransmitDelay(pkt);
         return ACTION_RETRANSMIT_DELAYED(0, d);  // Routed traffic is HIGHEST priority 
       }
