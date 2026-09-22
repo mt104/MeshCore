@@ -1,5 +1,5 @@
 #include "Mesh.h"
-#include <Arduino.h>
+//#include <Arduino.h>
 
 namespace mesh {
 
@@ -114,7 +114,7 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
       uint8_t dest_hash = pkt->payload[i++];
       uint8_t src_hash = pkt->payload[i++];
       if (self_id.isHashMatch(&dest_hash)) {
-        Serial.printf("Received TXT_MSG maybe for this node but we're not next hop so processing it anyway\r\n");
+        //Serial.printf("Received TXT_MSG maybe for this node but we're not next hop so processing it anyway\r\n");
         isForThisNode = true;
       }
     }
