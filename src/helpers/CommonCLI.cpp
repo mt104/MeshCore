@@ -12,6 +12,7 @@
 #if defined(ESP32)
 #include "WiFi.h"
 #include "WiFiHelper.h"
+#include "Syslog.h"
 #endif
 
 // Believe it or not, this std C function is busted on some platforms!
@@ -449,6 +450,9 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, char* command, char* re
     } else if (memcmp(command, "wifi forget", 9) == 0) {
       WiFiHelper.forget();
       strcpy(reply, "   WiFi credentials forgotten");
+    } else if (memcmp(command, "syslog test", 11) == 0) {
+      syslogSsend(1, 6, "test", "Syslog test message");
+      strcpy(reply, "   Syslog test sent");
 #endif
     } else {
       strcpy(reply, "Unknown command");
