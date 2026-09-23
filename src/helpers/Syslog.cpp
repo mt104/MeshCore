@@ -31,5 +31,9 @@ void syslogSsend(uint8_t facility, uint8_t severity, const char *tag, const char
   udpSyslog.endPacket();
 }
 
+void syslogDebug(const char *tag, const char *message) {
+    syslogSsend(1, 7, tag, message);  // facility=1 (user-level), severity=7 (debug)
+}
+
 #endif
 
