@@ -17,6 +17,7 @@
 #include "helpers/WiFiHelper.h"
 #include "WiFi.h"
 WiFiHelperClass WiFiHelper;
+#include "helpers/Syslog.h"
 #endif
 
   StdRNG fast_rng;
@@ -46,6 +47,7 @@ static unsigned long userBtnDownAt = 0;
 #if defined(ESP32)
 bool wifi_needs_reconnect = false;
 unsigned long last_wifi_reconnect_attempt = 0;
+bool startedSyslog = false;
 #endif
 
 void setup() {
@@ -138,6 +140,11 @@ void setup() {
       wifi_needs_reconnect = true;
     } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
       Serial.printf("WiFi connected successfully, IP = %s\r\n", WiFi.localIP().toString().c_str());
+      if (!startedSyslog) {
+        syslogBegin("192.168.2.60", WiFi.localIP().toString().c_str());
+        startedSyslog = true;
+        syslogSsend(1, 6, "init", "Syslog started");
+      }
       wifi_needs_reconnect = false;
     }
   });
