@@ -87,7 +87,9 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
     }
 
     // if (self_id.isHashMatch(pkt->path, pkt->getPathHashSize()) && allowPacketForward(pkt)) {
-    if (self_id.isHashMatchAnywhereInPath(pkt->path, pkt->path_len, pkt->path, pkt->path_len) && allowPacketForward(pkt)) {
+    uint8_t my_hash[PATH_HASH_SIZE];
+    self_id.copyHashTo(my_hash);
+    if (self_id.isHashMatchAnywhereInPath(my_hash, pkt->path, pkt->path_len) && allowPacketForward(pkt)) {
       if (pkt->getPayloadType() == PAYLOAD_TYPE_MULTIPART) {
         return forwardMultipartDirect(pkt);
       } else if (pkt->getPayloadType() == PAYLOAD_TYPE_ACK) {
