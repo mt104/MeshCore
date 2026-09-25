@@ -1,5 +1,5 @@
 #include "Mesh.h"
-//#include <Arduino.h>
+#include <Arduino.h>
 
 namespace mesh {
 
@@ -319,19 +319,8 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
 
           // Inspect advert looking for locally heard companions
           if (pkt->path_len == 0) {
-            //Serial.printf("DEBUG_MARKT: payload=");
-            //for (int j = 0; j < pkt->payload_len; j++) {
-            //  Serial.printf("%02X", pkt->payload[j]);
-            //}
-            //Serial.printf("\r\n");
             uint8_t companion_hash_1B = pkt->payload[0];
-            Serial.printf("DEBUG_MARKT: Direct advert heard... companion_hash_1B=%02X, "
-                          "path_len=%d, path=",
-                          companion_hash_1B, pkt->path_len);
-            for (int j = 0; j < pkt->path_len; j++) {
-              Serial.printf("%02X", pkt->path[j]);
-            }
-            Serial.printf("\r\n");
+            Serial.printf("DEBUG_MARKT: Direct advert heard... companion_hash_1B=%02X\r\n", companion_hash_1B);
           }
 
         } else {
