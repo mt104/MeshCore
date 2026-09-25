@@ -3,6 +3,11 @@
 #include <Utils.h>
 #include <Stream.h>
 
+#ifdef ESP32
+#include "helpers/Syslog.h"
+#include <cstdio>
+#endif
+
 namespace mesh {
 
 /**
@@ -31,11 +36,25 @@ public:
     return memcmp(hash, pub_key, len) == 0;
   }
 
-  bool isHashMatchAnywhereInPath(const uint8_t *hash, uint8_t len, const uint8_t *path, uint8_t path_len) const {
-    uint8_t hash_size = (path_len >> 6) + 1;
-    uint8_t hash_count = path_len & 63;
+  bool isHashMatchAnywhereInPath(const uint8_t *hash, const uint8_t *path, uint8_t path_len) const {
+    int hash_size = (path_len >> 6) + 1;
+    int hash_count = path_len & 63;
     for (int i = 0; i < hash_count; i++) {
-      if (memcmp(hash, &path[i*hash_size], len) == 0) return true;
+      if (memcmp(hash, &path[i*hash_size], hash_size) == 0) {
+#ifdef ESP32
+        char buffer[200];
+        sprintf(buffer, "Matched %02X %02X %02X hash_size %d at index %d (path_len=%d)", hash[0], hash[1], hash[2], hash_size, i, path_len);
+        // Append bytes from the path as a series of hex values for context
+        strcat(buffer, " Path:");
+        for (int j = 0; j < hash_count; j++) {
+          char hex[3];
+          sprintf(hex, " %02X", path[j]);
+          strcat(buffer, hex);
+        }
+        syslogDebug("isHashMatchAnywhereInPath", buffer);
+#endif
+        return true;
+      }
     }
     return false;
   }

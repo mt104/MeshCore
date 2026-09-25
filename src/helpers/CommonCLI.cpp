@@ -9,6 +9,12 @@
 #define BRIDGE_MAX_BAUD 115200
 #endif
 
+#if defined(ESP32)
+#include "WiFi.h"
+#include "WiFiHelper.h"
+#include "Syslog.h"
+#endif
+
 // Believe it or not, this std C function is busted on some platforms!
 static uint32_t _atoi(const char* sp) {
   uint32_t n = 0;
@@ -440,6 +446,14 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, char* command, char* re
       _callbacks->formatRadioStatsReply(reply);
     } else if (sender_timestamp == 0 && memcmp(command, "stats-core", 10) == 0 && (command[10] == 0 || command[10] == ' ')) {
       _callbacks->formatStatsReply(reply);
+#if defined(ESP32)
+    } else if (memcmp(command, "wifi forget", 9) == 0) {
+      WiFiHelper.forget();
+      strcpy(reply, "   WiFi credentials forgotten");
+    } else if (memcmp(command, "syslog test", 11) == 0) {
+      syslogSsend(1, 6, "test", "Syslog test message");
+      strcpy(reply, "   Syslog test sent");
+#endif
     } else {
       strcpy(reply, "Unknown command");
     }
@@ -798,6 +812,26 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
       }
     }
   #endif
+  #if defined(ESP32)
+    } else if (memcmp(config, "wifi.ssid", 9) == 0) {
+      config += 9; // skip "wifi.ssid"
+      while (*config == ' ') config++; // skip any leading spaces
+      WiFiHelper.updateSSID(config);
+      if (WiFiHelper.save()) {
+        sprintf(reply, "OK");
+      } else {
+        strcpy(reply, "Error: failed to save WiFi config");
+      }
+    } else if (memcmp(config, "wifi.password", 13) == 0) {
+      config += 13; // skip "wifi.password"
+      while (*config == ' ') config++; // skip any leading spaces
+      WiFiHelper.updatePassphrase(config);
+      if (WiFiHelper.save()) {
+        sprintf(reply, "OK");
+      } else {
+        strcpy(reply, "Error: failed to save WiFi config");
+      }
+  #endif
   } else {
     strcpy(reply, "unknown config: ");
     StrHelper::strncpy(&reply[16], config, 160-17);
@@ -981,6 +1015,18 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
     if (tmp == reply) {
       sprintf(reply, "No extra SF configured");
     }
+#if defined(ESP32)
+  } else if (memcmp(config, "wifi.status", 11) == 0) {
+    if (WiFi.isConnected()) {
+      sprintf(reply, "Connected to %s, IP: %s", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+    } else {
+      sprintf(reply, "Not connected");
+    }
+  } else if (memcmp(config, "wifi.ssid", 10) == 0) {
+    sprintf(reply, "SSID: %s", WiFiHelper.getConfiguredSSID());
+  } else if (memcmp(config, "wifi.password", 14) == 0) {
+    sprintf(reply, "Password: %s", WiFiHelper.getConfiguredPassphrase());
+#endif
   } else {
     sprintf(reply, "??: %s", config);
   }

@@ -1,5 +1,5 @@
 #include "Mesh.h"
-#include <Arduino.h>
+//#include <Arduino.h>
 
 namespace mesh {
 
@@ -101,7 +101,9 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
     }
 
     // if (self_id.isHashMatch(pkt->path, pkt->getPathHashSize()) && allowPacketForward(pkt)) {
-    if (self_id.isHashMatchAnywhereInPath(pkt->path, pkt->path_len, pkt->path, pkt->path_len) && allowPacketForward(pkt)) {
+    uint8_t my_hash[PATH_HASH_SIZE];
+    self_id.copyHashTo(my_hash);
+    if (self_id.isHashMatchAnywhereInPath(my_hash, pkt->path, pkt->path_len) && allowPacketForward(pkt)) {
       if (pkt->getPayloadType() == PAYLOAD_TYPE_MULTIPART) {
         return forwardMultipartDirect(pkt);
       } else if (pkt->getPayloadType() == PAYLOAD_TYPE_ACK) {
@@ -115,28 +117,40 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
 
       if (!_tables->wasSeen(pkt)) {
         _tables->markSeen(pkt);
-
-        Serial.printf("DEBUG_MARKT: Preparing to forward\r\n");
-
-        Serial.printf("DEBUG_MARKT: Before removing self from path\r\n");
-        pkt->debugToSerial(pkt);
-
-        while (!self_id.isHashMatch(pkt->path, pkt->getPathHashSize())) {
+        //Serial.printf("DEBUG_MARKT: Preparing to forward\r\n");
+        //Serial.printf("DEBUG_MARKT: Before removing self from path\r\n");
+        //pkt->debugToSerial(pkt);
+        int maxRemove = 10; // TODO: Make this configurable?
+        int removeCount = 0;
+        while (!self_id.isHashMatch(pkt->path, pkt->getPathHashSize()) && removeCount < maxRemove) {
           removeSelfFromPath(pkt);
+          removeCount++;
         }
-
         removeSelfFromPath(pkt);
-
-        Serial.printf("DEBUG_MARKT: After removing self from path\r\n");
-        pkt->debugToSerial(pkt);
-
-        Serial.printf("DEBUG_MARKT: Forwarding\r\n");
-
+        //Serial.printf("DEBUG_MARKT: After removing self from path\r\n");
+        //pkt->debugToSerial(pkt);
+        //Serial.printf("DEBUG_MARKT: Forwarding\r\n");
         uint32_t d = getDirectRetransmitDelay(pkt);
         return ACTION_RETRANSMIT_DELAYED(0, d);  // Routed traffic is HIGHEST priority 
       }
     }
-    return ACTION_RELEASE;   // this node is NOT the next hop (OR this packet has already been forwarded), so discard.
+
+    // If this is a txt message that might be for us, even though we're not the next hop, check if it's addressed to this node.
+    bool isForThisNode = false;
+    if (pkt->getPayloadType() == PAYLOAD_TYPE_TXT_MSG) {
+      int i = 0;
+      uint8_t dest_hash = pkt->payload[i++];
+      uint8_t src_hash = pkt->payload[i++];
+      if (self_id.isHashMatch(&dest_hash)) {
+        //Serial.printf("Received TXT_MSG maybe for this node but we're not next hop so processing it anyway\r\n");
+        isForThisNode = true;
+      }
+    }
+
+    if (!isForThisNode) {
+      // this node is NOT the next hop (OR this packet has already been forwarded), so discard.
+      return ACTION_RELEASE;
+    }
   }
 
   if (pkt->isRouteFlood() && filterRecvFloodPacket(pkt)) return ACTION_RELEASE;
