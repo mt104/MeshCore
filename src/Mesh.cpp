@@ -321,6 +321,7 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
           if (pkt->path_len == 0) {
             uint8_t companion_hash_1B = pkt->payload[0];
             Serial.printf("DEBUG_MARKT: Direct advert heard... companion_hash_1B=%02X\r\n", companion_hash_1B);
+            companionWasHeardDirect(companion_hash_1B);
           }
 
         } else {
@@ -369,6 +370,45 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
       break;
     }
   return action;
+}
+
+uint8_t received_companion_hashes[10];
+void Mesh::companionWasHeardDirect(uint8_t companion_hash_1B) {
+  // Check if this companion hash has already been received directly. If so, move it to position 0, otherwise store in position 0 after moving all existing entries one position up.
+  int found_idx = -1;
+  for (int i = 0; i < 10; i++) {
+    if (received_companion_hashes[i] == companion_hash_1B) {
+      found_idx = i;
+      break;
+    }
+  }
+  if (found_idx == 0) {
+    // Already at position 0, nothing to do
+    debugPrintReceivedCompanionHashes();
+    return;
+  } else if (found_idx > 0) {
+    // Move the found entry to position 0
+    uint8_t temp = received_companion_hashes[found_idx];
+    for (int i = found_idx; i > 0; i--) {
+      received_companion_hashes[i] = received_companion_hashes[i - 1];
+    }
+    received_companion_hashes[0] = temp;
+  } else {
+    // Not found, insert at position 0 and shift others
+    for (int i = 9; i > 0; i--) {
+      received_companion_hashes[i] = received_companion_hashes[i - 1];
+    }
+    received_companion_hashes[0] = companion_hash_1B;
+  }
+  debugPrintReceivedCompanionHashes();
+}
+
+void Mesh::debugPrintReceivedCompanionHashes() {
+  Serial.printf("DEBUG_MARKT: received_companion_hashes:");
+  for (int i = 0; i < 10; i++) {
+    Serial.printf(" %02X", received_companion_hashes[i]);
+  }
+  Serial.printf("\r\n");
 }
 
 void Mesh::removeSelfFromPath(Packet* pkt) {

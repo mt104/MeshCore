@@ -37,6 +37,10 @@ class Mesh : public Dispatcher {
 protected:
   DispatcherAction onRecvPacket(Packet* pkt) override;
 
+  void companionWasHeardDirect(uint8_t companion_hash_1B);
+
+  void debugPrintReceivedCompanionHashes();
+
   virtual uint32_t getCADFailRetryDelay() const override;
 
   /**
